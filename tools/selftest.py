@@ -3,10 +3,12 @@
 
 Uploads the example programs and checks the monitor's replies: loading and
 checksums, running and stopping, serial I/O, breakpoints, single-stepping, the
-LCD text mirror, the speed limit and, when host/make test has downloaded it,
-the Klaus Dormann 6502 functional test.  Leaves the hello demo running.
+blackjack example, the LCD text mirror, the speed limit and, when host/make
+test has downloaded it, the Klaus Dormann 6502 functional test.  Leaves the
+hello demo running.
 
-Needs pyserial and the assembled asm/hello.bin and asm/echo.bin.
+Needs pyserial and the assembled asm/hello.bin, asm/echo.bin and
+asm/blackjack.bin.
 
 examples:
   selftest.py                       find the Pico by its USB ID
@@ -28,6 +30,7 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 UPLOAD = os.path.join(ROOT, "tools", "upload.py")
 HELLO = os.path.join(ROOT, "asm", "hello.bin")
 ECHO = os.path.join(ROOT, "asm", "echo.bin")
+BLACKJACK = os.path.join(ROOT, "asm", "blackjack.bin")
 KLAUS = os.path.join(ROOT, "host", "fake6502-upstream", "tests", "6502_functional_test.bin")
 
 failures = 0
@@ -78,7 +81,7 @@ def main():
                         help="fail if the firmware did not detect a display")
     args = parser.parse_args()
 
-    for path in (HELLO, ECHO):
+    for path in (HELLO, ECHO, BLACKJACK):
         if not os.path.exists(path):
             sys.exit(f"error: {os.path.relpath(path, ROOT)} missing; run make in asm/")
     port = args.port or find_pico()
@@ -126,6 +129,20 @@ def main():
         out = talk(ser, b"\x03") + talk(ser, "d\n")
         check("Ctrl-C stops the program", "Stopped at $02" in out, out)
         check("typed text on the LCD", "|Hi              |" in out and "|there           |" in out, out)
+
+    ok, out = upload(port, BLACKJACK)
+    check("upload and run blackjack.bin", ok and "OK running from $0200" in out, out)
+
+    with serial.Serial(port, 115200, timeout=0.1) as ser:
+        # Seed $1234 with the fixed-seed flag set: the first hand is always
+        # the dealer's 8 5 A 9 (bust) against the player's J Q.
+        talk(ser, b"\x03")
+        talk(ser, "w 00F0 34 12 01\ng 200\n")
+        out = talk(ser, " ", 1.0) + talk(ser, "S", 3.0)
+        out += talk(ser, b"\x03") + talk(ser, "d\nw 00F2 00\n")
+        check("blackjack plays a seeded hand",
+              "Dealer busts. You win!" in out and "|D:85A9      BUST|" in out
+              and "|P:JQ         WIN|" in out, out)
 
     ok, out = upload(port, HELLO, "--no-run")
     check("upload without running", ok and "OK loaded" in out and "running" not in out, out)

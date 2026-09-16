@@ -29,7 +29,7 @@ the LCD by writing to memory-mapped registers.
 | `src/pico/` | Pico-only code: `main.c`, and `lcd_pcf8574.c` (I²C display driver) |
 | `src/demo_program.h` | Built-in demo, generated from `asm/hello.asm` |
 | `host/` | PC simulator (`sim6502`), the CPU test suites and the disassembler test |
-| `asm/` | Example programs and `lcd6502.inc` register definitions |
+| `asm/` | Example programs (hello, echo, blackjack) and `lcd6502.inc` register definitions |
 | `images/` | Photos for this README |
 | `tools/upload.py` | Uploads a program to the Pico (or the simulator) |
 | `tools/selftest.py` | Automated checks against the Pico (or the simulator) |
@@ -218,10 +218,12 @@ address range and checksum before replying `OK`.
 - running and stopping, and serial I/O,
 - breakpoints, stepping and disassembly,
 - the LCD text, and with `--expect-lcd` that a display was detected,
+- a seeded hand of the blackjack example,
 - the 1 MHz speed limit.
 
 It also runs the Klaus Dormann functional test, once `make test` in `host/` has
-downloaded it. On a Pico 2 with the Freenove display, all 23 checks pass. The
+downloaded it. On a Pico 2 with the Freenove display, all 25 checks pass
+(24 without `--expect-lcd`). The
 speed measures about 999 kHz under the limit and about 2.6–2.9 MHz with no limit.
 It leaves the hello demo running.
 
@@ -550,7 +552,7 @@ Alternatively, install it with `sudo apt install 64tass`.
 
 ```sh
 cd asm
-make                                    # hello.bin, echo.bin (+ .lst listings)
+make                                    # hello.bin, echo.bin, blackjack.bin (+ .lst listings)
 # or: 64tass -a --m6502 --nostart -o prog.bin prog.asm
 python3 ../tools/upload.py hello.bin
 ```
@@ -558,6 +560,90 @@ python3 ../tools/upload.py hello.bin
 Include `lcd6502.inc` for the register names (see `asm/hello.asm`). To change the
 built-in demo, edit `asm/hello.asm`, run `make demo` in `asm/`, then rebuild the
 firmware with `tools/build-firmware.sh` and flash it.
+
+## Example game: blackjack
+
+`asm/blackjack.asm` is a blackjack game that uses the LCD as the card table and
+the serial terminal as the keyboard. Assemble it (64tass is needed; see
+[Writing programs in assembly](#writing-programs-in-assembly)), upload it, then
+connect:
+
+```sh
+. ../6502-Pico-Build/env.sh                 # puts 64tass on your PATH
+make -C asm blackjack.bin                   # builds asm/blackjack.bin
+python3 tools/upload.py asm/blackjack.bin   # quit Minicom first
+minicom pico6502
+```
+
+Press any key to deal. The dealer's cards are on the top row and yours on the
+bottom, with totals at the right. The dealer's second card shows as `?` until you
+stand. Each card is one character: `A`, `2`–`9`, `T` (ten), `J`, `Q` or `K`.
+
+```
++----------------+          +----------------+
+|D:K?            |          |D:K79       BUST|
+|P:A7          18|          |P:A7         WIN|
++----------------+          +----------------+
+    your turn                   hand over
+```
+
+| Key | Action |
+|---|---|
+| `H` | Hit: take another card |
+| `S` | Stand: the dealer plays |
+| Any key | Deal the next hand, once a hand is over |
+| Ctrl-C | Back to the monitor; `c` resumes the game |
+
+**Rules:**
+- **Deck:** one 52-card deck, shuffled at the start and again when fewer than 15
+  cards remain.
+- **Aces:** count 1 or 11. Reaching 21 stands automatically.
+- **Blackjack:** a two-card 21 ends the hand at once. Yours wins (`BJ!`), the
+  dealer's beats you, and two blackjacks push.
+- **Dealer:** draws until reaching 17, and stands on every 17, including soft 17.
+  At the default 1 MHz speed limit there's a pause of about ⅔ second before each
+  dealer card; with `t 0` the pauses almost vanish.
+- **No betting,** doubling or splitting; the terminal keeps a running score.
+
+When a hand ends, your row shows `WIN`, `LOSE`, `PUSH`, `BJ!`, or `BUST` if you went
+over 21. If the dealer goes over 21, the dealer's row shows `BUST`.
+
+The terminal shows the same game, with totals. This is a real first hand, where
+you stand on 20 and the dealer busts:
+
+```
+Dealer: 8 ?
+You:    J Q = 20
+H)it or S)tand? S
+Dealer: 8 5 = 13
+You:    J Q = 20
+Dealer: 8 5 A = 14
+You:    J Q = 20
+Dealer: 8 5 A 9 = 23
+You:    J Q = 20
+Dealer busts. You win!
+Wins 1  Losses 0  Pushes 0
+Press any key to deal.
+```
+
+**Random cards:** the 6502 has no random-number hardware. Instead, the game runs a
+16-bit xorshift generator that keeps stepping while it waits for each key, so your
+timing decides the cards. For a repeatable game, stop the game with Ctrl-C, set a
+seed at `$F0–$F1` and the fixed-seed flag at `$F2`, then restart:
+
+```
+> w 00F0 34 12 01
+> g 200
+```
+
+With seed `$1234`, the first hand is always the one above; `tools/selftest.py`
+plays it. `w 00F2 00` switches back to timing-based cards.
+
+**Memory used:**
+- code and text: `$0200–$07B3` (1,460 bytes),
+- the deck: `$1000–$1033`,
+- the hands: `$1100–$111F`,
+- zero page: `$10–$23`, `$E0–$E1` and `$F0–$F2`.
 
 ## Memory map
 
