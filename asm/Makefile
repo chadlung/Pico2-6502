@@ -1,12 +1,12 @@
 # Assemble the example programs with 64tass.
 #
-#   make          build hello.bin and echo.bin
+#   make          build hello.bin, echo.bin and blackjack.bin
 #   make demo     regenerate the firmware's built-in demo from hello.asm
 
 AS      = 64tass
 ASFLAGS = -a --m6502 --nostart
 
-all: hello.bin echo.bin
+all: hello.bin echo.bin blackjack.bin
 
 %.bin: %.asm lcd6502.inc
 	$(AS) $(ASFLAGS) -L $*.lst -o $@ $<
