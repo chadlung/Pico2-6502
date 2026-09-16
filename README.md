@@ -668,6 +668,14 @@ Also used or relied on:
 - **Freenove's I2C LCD1602 documentation and example code:** the reference for the
   display's I²C addresses, PCF8574 pin assignments and power requirements.
 
+## License
+
+This project is released under the BSD 2-Clause License; see [LICENSE](LICENSE).
+Files from other projects keep their own licenses:
+- **`src/fake6502/`:** Fake6502's BSD 2-Clause License, `src/fake6502/LICENSE`.
+- **`pico_sdk_import.cmake`:** the Pico SDK's BSD 3-Clause License, stated in the
+  file.
+
 ## Ideas for next steps
 
 - Save an uploaded program to flash so it runs at power-up without a PC.
