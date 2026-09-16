@@ -1,0 +1,20 @@
+# Assemble the example programs with 64tass.
+#
+#   make          build hello.bin and echo.bin
+#   make demo     regenerate the firmware's built-in demo from hello.asm
+
+AS      = 64tass
+ASFLAGS = -a --m6502 --nostart
+
+all: hello.bin echo.bin
+
+%.bin: %.asm lcd6502.inc
+	$(AS) $(ASFLAGS) -L $*.lst -o $@ $<
+
+demo: hello.bin
+	python3 ../tools/bin2c.py hello.bin 0200 > ../src/demo_program.h
+
+clean:
+	rm -f *.bin *.lst
+
+.PHONY: all demo clean

@@ -1,0 +1,10 @@
+build/
+host/sim6502
+host/cputest
+host/cputest.c
+host/cputest.log
+host/disasm_dump
+host/fake6502-upstream/
+asm/*.bin
+asm/*.lst
+__pycache__/
