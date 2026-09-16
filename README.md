@@ -564,10 +564,14 @@ firmware with `tools/build-firmware.sh` and flash it.
 ## Example game: blackjack
 
 `asm/blackjack.asm` is a blackjack game that uses the LCD as the card table and
-the serial terminal as the keyboard. Upload it, then connect:
+the serial terminal as the keyboard. Assemble it (64tass is needed; see
+[Writing programs in assembly](#writing-programs-in-assembly)), upload it, then
+connect:
 
 ```sh
-python3 tools/upload.py asm/blackjack.bin
+. ../6502-Pico-Build/env.sh                 # puts 64tass on your PATH
+make -C asm blackjack.bin                   # builds asm/blackjack.bin
+python3 tools/upload.py asm/blackjack.bin   # quit Minicom first
 minicom pico6502
 ```
 
