@@ -222,7 +222,8 @@ address range and checksum before replying `OK`.
 - the 1 MHz speed limit.
 
 It also runs the Klaus Dormann functional test, once `make test` in `host/` has
-downloaded it. On a Pico 2 with the Freenove display, all 23 checks pass. The
+downloaded it. On a Pico 2 with the Freenove display, all 25 checks pass
+(24 without `--expect-lcd`). The
 speed measures about 999 kHz under the limit and about 2.6–2.9 MHz with no limit.
 It leaves the hello demo running.
 
